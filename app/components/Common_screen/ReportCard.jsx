@@ -1,34 +1,47 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ReportCard() {
   const [searchDate, setSearchDate] = useState("");
-  const [reports] = useState([
-    {
-      session_id: "SESSION123",
-      date: "2025-04-01",
-      attended: 42,
-      details: "Chapter 1 quiz conducted.",
-    },
-    {
-      session_id: "SESSION124",
-      date: "2025-04-08",
-      attended: 38,
-      details: "Midterm mock test.",
-    },
-    {
-      session_id: "SESSION125",
-      date: "2025-04-08",
-      attended: 40,
-      details: "Live poll on topic X.",
-    },
-    {
-      session_id: "SESSION126",
-      date: "2025-04-10",
-      attended: 45,
-      details: "Attendance recorded for full class.",
-    },
-  ]);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch reports from API on mount
+  useEffect(() => {
+    const fetchReports = async () => {
+      const user_id = localStorage.getItem("user_id");
+      if (!user_id) {
+        setReports([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/get_session_data", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_id }),
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.reports) {
+          setReports(result.reports);
+        } else {
+          setReports([]);
+        }
+      } catch (err) {
+        console.error("Fetch failed:", err);
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
 
   const filteredReports = searchDate
     ? reports.filter((r) => r.date === searchDate)
@@ -61,8 +74,10 @@ export default function ReportCard() {
 
       {/* Report List */}
       <div className="space-y-4 max-h-[400px] overflow-auto hide-scrollbar">
-        {filteredReports.length === 0 ? (
-          <p className="text-gray-500 text-center">No reports found for selected date.</p>
+        {loading ? (
+          <p className="text-center text-gray-500">Loading...</p>
+        ) : filteredReports.length === 0 ? (
+          <p className="text-gray-500 text-center">No sessions created by user.</p>
         ) : (
           filteredReports.map((report, index) => (
             <div

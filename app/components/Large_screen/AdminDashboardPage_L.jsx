@@ -22,13 +22,16 @@ export default function AdminDashboardPage_L() {
 
       {/* Main Content + Bottom */}
       <div className="flex flex-col flex-1 gap-2 min-h-0 overflow-hidden">
-        <div className="flex-[1.2] p-4 overflow-auto">
-          <MainContent />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="h-full p-1 overflow-auto">
+            <MainContent />
+          </div>
         </div>
         <div className="h-52 shadow-md p-2 bg-white rounded-lg">
           <BottomPanel />
         </div>
       </div>
+
       <div className="flex flex-col w-52 gap-2">
         <div className="flex-1 shadow-md p-2 min-h-0">
           <RightTop />

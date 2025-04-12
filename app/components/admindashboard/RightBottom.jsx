@@ -5,9 +5,9 @@ export default function RightBottom() {
   const [inputTimer, setInputTimer] = useState("");
 
   // Example data
-  const totalUsers = 25;
-  const questionResponses = 18;
-  const pollResponses = 12;
+  const totalUsers = 0;
+  const questionResponses = 0;
+  const pollResponses = 0;
 
   const handleSetTimer = () => {
     if (inputTimer) {

@@ -1,49 +1,77 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function MyDataCard() {
   const [filter, setFilter] = useState("all");
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      type: "presentation",
-      title: "React Basics",
-      description: "Introduction to React and JSX.",
-      details: "Covers components, props, and hooks in-depth.",
-    },
-    {
-      id: 2,
-      type: "question",
-      title: "Quiz: JS Loops",
-      description: "Multiple choice questions on loops.",
-      details: "Includes for, while, do-while loop based questions.",
-    },
-    {
-      id: 3,
-      type: "poll",
-      title: "Topic Preference",
-      description: "Poll on preferred topic for next session.",
-      details: "Choices were: Redux, TypeScript, Firebase.",
-    },
-    {
-      id: 4,
-      type: "presentation",
-      title: "Next.js Routing",
-      description: "Presentation about pages and layouts in Next.js",
-      details: "Explains app vs pages directory routing system.",
-    },
-  ]);
+  // Fetch function wrapped in useCallback to reuse it
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const user_id = localStorage.getItem("user_id");
 
-  const handleDelete = (id) => {
-    setItems(items.filter((item) => item.id !== id));
+    if (!user_id) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/get_resource_data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id }),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        setItems(result.data);
+      } else {
+        console.error(result.error);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = async (id, type) => {
+    const user_id = localStorage.getItem("user_id");
+    if (!user_id) return;
+  
+    const confirmed = window.confirm("Are you sure you want to delete this item?");
+    if (!confirmed) return;
+  
+    try {
+      const res = await fetch("/api/delete_resource_data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, type, id }),
+      });
+  
+      const result = await res.json();
+      if (res.ok) {
+        await fetchData();
+      } else {
+        console.error("Delete failed:", result.error);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
   };
+  
 
   const filteredItems =
     filter === "all" ? items : items.filter((item) => item.type === filter);
 
   return (
-    <div className="p-6 bg-white text-gray-800 ">
+    <div className="p-6 bg-white text-gray-800">
       <h2 className="text-2xl font-bold mb-4 text-center">My Data</h2>
 
       {/* Filter Dropdown */}
@@ -62,38 +90,43 @@ export default function MyDataCard() {
 
       {/* Content List */}
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
-        {filteredItems.length === 0 ? (
-          <p className="text-center text-gray-500">No data found for selected type.</p>
+        {loading ? (
+          <p className="text-center text-gray-500">Loading...</p>
+        ) : filteredItems.length === 0 ? (
+          <p className="text-center text-gray-500">No materials created.</p>
         ) : (
-          filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="relative border p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition group overflow-hidden"
-            >
-              <div className="flex justify-between items-start z-10 relative">
-                <div>
-                  <p className="font-semibold text-lg">{item.title}</p>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                </div>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="text-sm text-red-500 hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
+          filteredItems.map((item, index) => {
+            const itemId =
+              item.presentation_id || item.poll_id || item.bank_id || item.id;
+            const key = `${item.type}-${itemId || index}`;
+            const title = item.title || item.question || "Untitled";
+            const description = item.description || "";
+            const details = item.details || description || item.type;
 
-              {/* Hover Details Overlay */}
-              <div className="absolute inset-0 bg-white rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 pointer-events-none">
-                <p className="font-semibold mb-2 text-gray-800">Details:</p>
-                <p className="text-sm text-gray-700">{item.details}</p>
+            return (
+              <div
+                key={key}
+                className="relative border p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition group overflow-hidden"
+              >
+                <div className="flex justify-between items-start z-10 relative">
+                  <div>
+                    <p className="font-semibold text-lg">{title}</p>
+                    <p className="text-sm text-gray-600">{description}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(itemId, item.type)}
+                    className="text-sm text-red-500 hover:underline z-50"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {/* Hide Scrollbar (Webkit + Firefox) */}
+      {/* Scrollbar Styling */}
       <style jsx>{`
         .custom-scroll::-webkit-scrollbar {
           width: 6px;

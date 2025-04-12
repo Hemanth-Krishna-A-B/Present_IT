@@ -3,6 +3,7 @@ import { useState } from "react";
 
 export default function PresentationUploadCard() {
   const [title, setTitle] = useState("");
+  const [isLoading, setLoading] = useState(false);
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
 
@@ -15,22 +16,82 @@ export default function PresentationUploadCard() {
     }
   };
 
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+
     if (!title || !description || !file) {
       alert("Please fill all fields and upload a valid file.");
+      setLoading(false);
       return;
     }
-    // Handle form submission here
-    console.log("Title:", title);
-    console.log("Description:", description);
-    console.log("File:", file.name);
+
+    const convertFormData = new FormData();
+    convertFormData.append("file", file);
+
+    try {
+      // Step 1: Convert the file to images using backend
+      const convertRes = await fetch("https://present-it-backend.onrender.com/upload/", {
+        method: "POST",
+        body: convertFormData,
+      });
+
+      const convertResult = await convertRes.json();
+      let imageUrls;
+
+      if (convertRes.ok) {
+        imageUrls = convertResult.image_urls;
+      } else {
+        console.error("Conversion failed:", convertResult.detail);
+        alert("File conversion failed.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Send presentation data to your API to save in Supabase
+      const dbRes = await fetch("/api/upload_presentations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          user_id: localStorage.getItem("user_id"),
+          image_urls: imageUrls,
+        }),
+      });
+
+      const dbResult = await dbRes.json();
+
+      if (dbRes.ok) {
+        alert("Presentation uploaded and saved successfully!");
+        console.log("Inserted presentation:", dbResult);
+        // Reset form
+        setTitle("");
+        setDescription("");
+        setFile(null);
+      } else {
+        console.error("Failed to insert presentation:", dbResult.message);
+        alert("Failed to save presentation to database.");
+      }
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("Something went wrong.");
+    } finally {
+      setLoading(false);
+      setTitle("");
+      setDescription("");
+      setFile(null);
+    }
   };
+
 
   return (
     <div className="p-6 bg-white w-full max-w-xl mx-auto">
       <h2 className="text-xl font-semibold mb-4 text-gray-800 text-center">Upload Presentation</h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Title */}
         <div>
@@ -76,7 +137,7 @@ export default function PresentationUploadCard() {
             type="submit"
             className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition"
           >
-            Upload
+            {isLoading ? "Uploading..." : "Upload"}
           </button>
         </div>
       </form>

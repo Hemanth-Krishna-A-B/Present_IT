@@ -42,17 +42,93 @@ export default function QuestionUploadCard() {
     setQuestions(updated);
   };
 
-  const handleUpload = () => {
-    const formatted = {
-      title: bankTitle,
-      questions: questions.map(({ preview, ...rest }) => rest),
-    };
 
-    console.log("Uploading Question Bank:", formatted);
 
-    // You can replace this log with an API call to save to Supabase
-    alert("Question Bank uploaded successfully!");
+
+
+
+
+
+
+
+
+
+  const handleUpload = async () => {
+    if (!bankTitle.trim()) {
+      alert("Please enter a title for the question bank.");
+      return;
+    }
+  
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.text.trim()) {
+        alert(`Question ${i + 1} is missing text.`);
+        return;
+      }
+      if (q.options.some((opt) => !opt.trim())) {
+        alert(`All 4 options must be filled in Question ${i + 1}.`);
+        return;
+      }
+      if (!q.correct.trim()) {
+        alert(`Please select the correct answer for Question ${i + 1}.`);
+        return;
+      }
+    }
+  
+    // Prepare form data for API
+    const formData = new FormData();
+    formData.append("user_id",localStorage.getItem("user_id"));
+    formData.append("title", bankTitle);
+  
+    questions.forEach((q, index) => {
+      formData.append(`questions[${index}][text]`, q.text);
+      q.options.forEach((opt, i) => {
+        formData.append(`questions[${index}][options][${i}]`, opt);
+      });
+      formData.append(`questions[${index}][correct]`, q.correct);
+      if (q.image) {
+        formData.append(`questions[${index}][image]`, q.image);
+      }
+    });
+  
+    try {
+      const res = await fetch("/api/upload_questions", {
+        method: "POST",
+        body: formData,
+      });
+  
+      if (res.ok) {
+        
+        alert("Question Bank uploaded successfully ! ");
+  
+        // Reset form
+        setBankTitle("");
+        setQuestions([
+          {
+            text: "",
+            options: ["", "", "", ""],
+            correct: "",
+            image: null,
+            preview: null,
+          },
+        ]);
+      } else {
+        const err = await res.json();
+        alert("Upload failed: " + err.message);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Something went wrong while uploading.");
+    }
   };
+
+  
+
+
+
+
+
+
 
   return (
     <div className="bg-white p-6 space-y-6 text-gray-800">

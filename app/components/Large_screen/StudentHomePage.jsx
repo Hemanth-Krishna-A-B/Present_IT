@@ -1,22 +1,62 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut, Maximize2, X } from "lucide-react";
+import { useRealtime } from "@/context/RealtimeContext";
 
 export default function StudentHomePage() {
-  const hasImage = true; // Set to true to test image view
-  const imageUrl = "https://t4.ftcdn.net/jpg/03/17/25/45/360_F_317254576_lKDALRrvGoBr7gQSa1k4kJBx7O2D15dc.jpg"; // Replace with your image path
-  const questions = []; // Add question data here
+  const hasImage = true;
+  const imageUrl = "https://t4.ftcdn.net/jpg/03/17/25/45/360_F_317254576_lKDALRrvGoBr7gQSa1k4kJBx7O2D15dc.jpg";
+  const questions = [];
 
   const [showFullImage, setShowFullImage] = useState(false);
+  const router = useRouter();
+
+  // Use the RealtimeContext to access the channelRef and functions
+  const { channelRef, unsubscribeChannel, sessionCode, presenceKey } = useRealtime();
+
+  const handleLogout = async () => {
+    // If the user is subscribed to a channel
+    if (channelRef.current) {
+      try {
+        // Optionally broadcast a leave event
+        await channelRef.current.send({
+          type: "broadcast",
+          event: "update",
+          payload: {
+            type: "leave",
+            timestamp: new Date().toISOString(),
+            sessionCode, // You can also include more session-related data here
+            presenceKey,  // Include student's registration number if needed
+          },
+        });
+
+        // Unsubscribe from the channel
+        unsubscribeChannel();
+        console.log("👋 Student left the channel.");
+      } catch (err) {
+        console.error("Error leaving channel:", err);
+      }
+    }
+
+    // Clear any session or student info (localStorage, etc.)
+    localStorage.removeItem("student_session_id");
+    localStorage.removeItem("reg_no");
+
+    // Redirect to home page after logout
+    router.replace("/");
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      
       {/* ===== Navbar ===== */}
       <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-blue-600">Present_IT</h1>
-        <button className="flex items-center gap-1 text-red-500 hover:text-red-600 transition font-medium">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1 text-red-500 hover:text-red-600 transition font-medium"
+        >
           <LogOut className="h-5 w-5" />
           Logout
         </button>
@@ -25,7 +65,6 @@ export default function StudentHomePage() {
       {/* ===== Main Content ===== */}
       <div className="flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-4xl space-y-6">
-
           {/* ===== Image Preview ===== */}
           <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200 relative">
             <div className="h-48 sm:h-56 md:h-64 flex items-center justify-center text-gray-400 text-lg font-medium">
@@ -86,7 +125,11 @@ export default function StudentHomePage() {
           >
             <X className="w-5 h-5" />
           </button>
-          <img src={imageUrl} alt="Fullscreen Preview" className="max-h-[90vh] max-w-[90vw] object-contain" />
+          <img
+            src={imageUrl}
+            alt="Fullscreen Preview"
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+          />
         </div>
       )}
     </div>

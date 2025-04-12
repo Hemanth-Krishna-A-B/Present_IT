@@ -46,19 +46,20 @@ export default function LoginForm() {
       return;
     }
 
+    localStorage.setItem("user_id",authUser.user.id);
     alert("Login successful!");
     router.push("/Admin_Dashboard");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="text-neutral-600 flex flex-col gap-3">
       <input
         name="email"
         type="email"
         placeholder="Email"
         value={formData.email}
         onChange={handleChange}
-        className="p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className="p-3 border  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
       <input
         name="class_name"

@@ -23,6 +23,68 @@ export default function PollUploadCard() {
     const preview = file ? URL.createObjectURL(file) : null;
     setPoll((prev) => ({ ...prev, image: file, preview }));
   };
+  
+  
+
+
+
+  const handleSubmit = async () => {
+    // Basic validation
+    if (!poll.question.trim()) {
+      alert("Poll question is required.");
+      return;
+    }
+  
+    const hasEmptyOption = poll.options.some((opt) => !opt.trim());
+    if (hasEmptyOption) {
+      alert("All poll options must be filled.");
+      return;
+    }
+  
+    // Proceed with form submission
+    const formData = new FormData();
+    formData.append("user_id",localStorage.getItem("user_id"));
+    formData.append("question", poll.question);
+    poll.options.forEach((opt, i) => {
+      formData.append(`options[${i}]`, opt);
+    });
+  
+    if (poll.image) {
+      formData.append("image", poll.image);
+    }
+    
+    try {
+      const res = await fetch("/api/upload_polls", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const result = await res.json();
+  
+      if (res.ok) {
+        if (res.ok) {
+          alert("Poll submitted successfully!");
+          console.log("Poll ID:", result.poll_id);
+          setPoll({
+            question: "",
+            options: ["", "", "", ""],
+            image: null,
+            preview: null,
+          });
+        }        
+      } else {
+        console.error("Error uploading poll:", result.message);
+        alert("Poll upload failed.");
+      }
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("Something went wrong.");
+    }
+  };
+
+  
+
+
 
   return (
     <div className="bg-white p-6  text-gray-800 max-w-2xl mx-auto">
@@ -79,9 +141,13 @@ export default function PollUploadCard() {
       </div>
 
       <div className="text-center">
-        <button className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+        <button
+          onClick={handleSubmit}
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+        >
           Submit Poll
         </button>
+
       </div>
     </div>
   );
